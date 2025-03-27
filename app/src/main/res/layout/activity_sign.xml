@@ -1,0 +1,100 @@
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000">
+
+    <!-- Full-Screen Background Image -->
+
+
+    <!-- Logo -->
+
+    <ImageView
+        android:id="@+id/backgroundImage"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:src="@drawable/splash_2" />
+
+    <ImageView
+        android:id="@+id/logoImage"
+        android:layout_width="100dp"
+        android:layout_height="100dp"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="50dp"
+        android:src="@drawable/logo" />
+
+    <!-- App Title Container -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/logoImage"
+        android:layout_centerHorizontal="true"
+        android:orientation="horizontal"
+        android:layout_marginTop="10dp">
+
+        <!-- "Fit" Text -->
+        <TextView
+            android:id="@+id/titleText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Fit"
+            android:textSize="36sp"
+            android:textColor="#FFFFFF"
+            android:fontFamily="sans-serif-medium"
+            android:textStyle="bold" />
+
+        <!-- "Hit" Text -->
+        <TextView
+            android:id="@+id/highlightText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=" Hit"
+            android:textSize="36sp"
+            android:textColor="#FFA500"
+            android:fontFamily="sans-serif-medium"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- Subtitle -->
+    <TextView
+        android:id="@+id/subtitleText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="250dp"
+        android:text="DON'T QUIT STAY FIT"
+        android:textSize="22sp"
+        android:textColor="#FFA500"
+        android:textStyle="bold"
+        android:fontFamily="sans-serif" />
+
+    <!-- Sign Up Button -->
+    <Button
+        android:id="@+id/signupButton"
+        android:layout_width="200dp"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/subtitleText"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="300dp"
+        android:backgroundTint="#FFA500"
+        android:text="SIGN UP"
+        android:textColor="#FFFFFF"
+        android:textStyle="bold" />
+
+
+
+    <!-- Log In Text -->
+    <TextView
+        android:id="@+id/loginText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/signupButton"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="10dp"
+        android:text="Log In With Account"
+        android:textSize="19sp"
+        android:textColor="#FFFFFF"
+        android:fontFamily="sans-serif" />
+</RelativeLayout>

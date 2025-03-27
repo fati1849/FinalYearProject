@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">Fit Hit</string>
+
+    <!-- Other strings -->
+    <string-array name="diseases_array">
+        <item>Arthritis</item>
+        <item>Diabetes</item>
+        <item>Heart Attack</item>
+        <item>Asthma</item>
+        <item>No / Other </item>
+    </string-array>
+
+</resources>

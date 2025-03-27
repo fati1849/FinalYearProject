@@ -1,0 +1,191 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".HeightDiseasesActivity">
+
+    <ImageView
+        android:id="@+id/icon"
+        android:layout_width="338dp"
+        android:layout_height="90dp"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="40dp"
+        android:src="@drawable/logo" />
+
+    <LinearLayout
+        android:id="@+id/titleContainer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_below="@id/icon"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="20dp">
+
+        <TextView
+            android:id="@+id/titleFit"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Fit"
+            android:textColor="#000000"
+            android:textSize="32sp"
+            android:textStyle="bold"
+            android:fontFamily="sans-serif-medium" />
+
+        <TextView
+            android:id="@+id/titleHit"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=" Hit"
+            android:textColor="#FFA500"
+            android:textSize="32sp"
+            android:textStyle="bold"
+            android:fontFamily="sans-serif-medium" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/subtitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/titleContainer"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="10dp"
+        android:text="Please provide your details"
+        android:textColor="#000000"
+        android:textSize="16sp" />
+
+    <!-- Separator -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#CCCCCC"
+        android:layout_below="@id/subtitle"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="10dp" />
+
+    <!-- Height Input -->
+    <LinearLayout
+        android:id="@+id/heightInputContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@drawable/rounded_edittext"
+        android:padding="12dp"
+        android:layout_marginTop="20dp"
+        android:layout_below="@id/subtitle"
+        android:layout_centerHorizontal="true">
+
+        <EditText
+            android:id="@+id/heightInput"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:hint="Height (cm)*"
+            android:background="@null"
+            android:textSize="16sp"
+            android:textColor="#000000"
+            android:padding="4dp" />
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_height"
+            android:contentDescription="Height Icon" />
+    </LinearLayout>
+
+    <!-- Weight Input -->
+    <LinearLayout
+        android:id="@+id/weightInputContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@drawable/rounded_edittext"
+        android:padding="12dp"
+        android:layout_marginTop="20dp"
+        android:layout_below="@id/heightInputContainer"
+        android:layout_centerHorizontal="true">
+
+        <EditText
+            android:id="@+id/weightInput"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:hint="Weight (kg)*"
+            android:background="@null"
+            android:textSize="16sp"
+            android:textColor="#000000"
+            android:padding="4dp" />
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_weight"
+            android:contentDescription="Weight Icon" />
+    </LinearLayout>
+
+    <!-- Age Input -->
+    <LinearLayout
+        android:id="@+id/ageInputContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@drawable/rounded_edittext"
+        android:padding="12dp"
+        android:layout_marginTop="20dp"
+        android:layout_below="@id/weightInputContainer"
+        android:layout_centerHorizontal="true">
+
+        <EditText
+            android:id="@+id/ageInput"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:hint="Age*"
+            android:background="@null"
+            android:textSize="16sp"
+            android:textColor="#000000"
+            android:padding="4dp" />
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_age"
+            android:contentDescription="Age Icon" />
+    </LinearLayout>
+
+    <!-- Diseases Dropdown -->
+    <Spinner
+        android:id="@+id/diseasesSpinner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:layout_below="@id/ageInputContainer"
+        android:layout_centerHorizontal="true" />
+
+    <!-- Next Button -->
+    <Button
+        android:id="@+id/nextButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_margin="16dp"
+        android:backgroundTint="#FFA500"
+        android:text="NEXT"
+        android:textColor="#FFFFFF"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
+    <!-- Inspiration Text -->
+    <TextView
+        android:id="@+id/inspireText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@id/nextButton"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="20dp"
+        android:text="Every step you take brings you closer to a healthier you!"
+        android:textColor="#FFA500"
+        android:textSize="14sp"
+        android:textStyle="italic"
+        android:fontFamily="sans-serif-medium" />
+
+</RelativeLayout>

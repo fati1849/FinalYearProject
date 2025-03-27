@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "364509608080",
+    "project_id": "fit-hit-a4d70",
+    "storage_bucket": "fit-hit-a4d70.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:364509608080:android:db8844b7a8f1e45cdc4015",
+        "android_client_info": {
+          "package_name": "com.example.fithit"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB-RCnerhH4wYSxEms7e7zdhjgw_hlGsWs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
