@@ -7,6 +7,12 @@ plugins {
 android {
     namespace 'com.example.fithit'
     compileSdk 35
+    android {
+        aaptOptions {
+            noCompress "tflite"
+        }
+    }
+
 
     defaultConfig {
         applicationId "com.example.fithit"
@@ -45,6 +51,8 @@ dependencies {
     androidTestImplementation libs.espresso.core
         implementation 'org.tensorflow:tensorflow-lite:2.12.0'
         implementation 'org.tensorflow:tensorflow-lite-support:0.4.3'
+        // workmnager dependency
+        implementation "androidx.work:work-runtime-ktx:2.7.1"
 
 
 }

@@ -1,6 +1,7 @@
 package com.example.fithit;
 
 import android.content.Context;
+import android.content.res.AssetFileDescriptor;
 
 import org.tensorflow.lite.Interpreter;
 
@@ -9,33 +10,40 @@ import java.io.IOException;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 
-public class RecommendationModelHandler {
+public class RecommendationModelHandler implements AutoCloseable {
 
-    private Interpreter interpreter;
+    private final Interpreter interpreter;
 
-    // Constructor to load the TFLite model
+    // Constructor: Load the model
     public RecommendationModelHandler(Context context, String modelPath) throws IOException {
         interpreter = new Interpreter(loadModelFile(context, modelPath));
     }
 
-    // Function to load the TFLite model from the assets folder
+    // Load TFLite model from assets
     private MappedByteBuffer loadModelFile(Context context, String modelPath) throws IOException {
-        FileInputStream fileInputStream = new FileInputStream(context.getAssets().openFd(modelPath).getFileDescriptor());
-        FileChannel fileChannel = fileInputStream.getChannel();
-        long startOffset = context.getAssets().openFd(modelPath).getStartOffset();
-        long declaredLength = context.getAssets().openFd(modelPath).getDeclaredLength();
+        AssetFileDescriptor fileDescriptor = context.getAssets().openFd(modelPath);
+        FileInputStream inputStream = new FileInputStream(fileDescriptor.getFileDescriptor());
+        FileChannel fileChannel = inputStream.getChannel();
+        long startOffset = fileDescriptor.getStartOffset();
+        long declaredLength = fileDescriptor.getDeclaredLength();
         return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength);
     }
 
-    // Function to run predictions using the model
+    // Perform prediction
     public float[] predict(float[] inputData) {
-        // Assuming the model has 5 output classes
-        float[][] output = new float[1][5];
-        interpreter.run(inputData, output);
-        return output[0]; // Return the array of probabilities for each class
+        float[][] input = new float[1][inputData.length]; // 1 sample of N features
+        input[0] = inputData;
+
+        // Assuming output is a 1D array with N classes (e.g., 5 recommendation types)
+        float[][] output = new float[1][5]; // Adjust size if your model has a different output
+
+        interpreter.run(input, output);
+
+        return output[0]; // Return the first row (prediction scores)
     }
 
-    // Close the interpreter when done
+    // Close model resources
+    @Override
     public void close() {
         if (interpreter != null) {
             interpreter.close();

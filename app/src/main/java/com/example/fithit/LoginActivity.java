@@ -7,12 +7,11 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseAuthInvalidUserException;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.database.FirebaseDatabase;
 
 public class LoginActivity extends AppCompatActivity {
 
@@ -26,30 +25,24 @@ public class LoginActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
 
-        // Initialize Firebase Auth
         mAuth = FirebaseAuth.getInstance();
 
-        // Initialize Views
         emailEditText = findViewById(R.id.email);
         passwordEditText = findViewById(R.id.password);
         loginButton = findViewById(R.id.loginButton);
         signupLink = findViewById(R.id.signupLink);
         forgotPassword = findViewById(R.id.forgotPassword);
 
-        // Login Button Click
         loginButton.setOnClickListener(view -> loginUser());
 
-        // Signup Link
         signupLink.setOnClickListener(view -> {
             Intent intent = new Intent(LoginActivity.this, SignupActivity.class);
             startActivity(intent);
         });
 
-        // Forgot Password
         forgotPassword.setOnClickListener(view -> verifyAndResetPassword());
     }
 
-    // Function to Log In the User with Email & Password
     private void loginUser() {
         String email = emailEditText.getText().toString().trim();
         String password = passwordEditText.getText().toString().trim();
@@ -65,10 +58,36 @@ public class LoginActivity extends AppCompatActivity {
                         FirebaseUser user = mAuth.getCurrentUser();
                         if (user != null) {
                             if (user.isEmailVerified()) {
-                                Toast.makeText(LoginActivity.this, "Login Successful", Toast.LENGTH_SHORT).show();
-                                Intent intent = new Intent(LoginActivity.this, HeightDiseasesActivity.class);
-                                startActivity(intent);
-                                finish();
+                                String uid = user.getUid();
+
+                                FirebaseDatabase.getInstance().getReference("Users").child(uid)
+                                        .get().addOnSuccessListener(snapshot -> {
+                                            if (snapshot.exists()) {
+                                                String height = snapshot.child("height").getValue(String.class);
+                                                String age = snapshot.child("age").getValue(String.class);
+                                                String gender = snapshot.child("gender").getValue(String.class);
+                                                String diseases = snapshot.child("diseases").getValue(String.class);
+                                                String goal = snapshot.child("goal").getValue(String.class);
+
+                                                if (height != null && age != null && gender != null && diseases != null && goal != null) {
+                                                    // ✅ All profile data exists → go to Home
+                                                    Toast.makeText(LoginActivity.this, "Welcome back!", Toast.LENGTH_SHORT).show();
+                                                    Intent intent = new Intent(LoginActivity.this, HomeActivity.class);
+                                                    startActivity(intent);
+                                                    finish();
+                                                } else {
+                                                    // ❌ Incomplete profile data → go to profile input
+                                                    Intent intent = new Intent(LoginActivity.this, HeightDiseasesActivity.class);
+                                                    startActivity(intent);
+                                                    finish();
+                                                }
+                                            } else {
+                                                Toast.makeText(LoginActivity.this, "User data not found.", Toast.LENGTH_SHORT).show();
+                                            }
+                                        }).addOnFailureListener(e -> {
+                                            Toast.makeText(LoginActivity.this, "Failed to read user data.", Toast.LENGTH_SHORT).show();
+                                        });
+
                             } else {
                                 user.sendEmailVerification().addOnCompleteListener(verifyTask -> {
                                     if (verifyTask.isSuccessful()) {
@@ -80,7 +99,7 @@ public class LoginActivity extends AppCompatActivity {
                                                 Toast.LENGTH_SHORT).show();
                                     }
                                 });
-                                mAuth.signOut(); // Log out unverified users
+                                mAuth.signOut(); // Logout unverified user
                             }
                         } else {
                             Toast.makeText(LoginActivity.this, "Error: User does not exist.", Toast.LENGTH_SHORT).show();
@@ -92,7 +111,6 @@ public class LoginActivity extends AppCompatActivity {
                 });
     }
 
-    // Function to Verify and Reset Password
     private void verifyAndResetPassword() {
         String email = emailEditText.getText().toString().trim();
 
@@ -101,17 +119,14 @@ public class LoginActivity extends AppCompatActivity {
             return;
         }
 
-        // Fetch the user's data from Firebase Authentication
         mAuth.fetchSignInMethodsForEmail(email)
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful() && task.getResult() != null) {
                         boolean isRegistered = !task.getResult().getSignInMethods().isEmpty();
 
                         if (isRegistered) {
-                            // If email exists, send reset link
                             sendPasswordResetEmail(email);
                         } else {
-                            // If email is not found
                             Toast.makeText(LoginActivity.this, "Email is not registered", Toast.LENGTH_SHORT).show();
                         }
                     } else {

@@ -6,8 +6,10 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
+import androidx.activity.ComponentActivity;
 
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -16,71 +18,73 @@ import com.google.firebase.database.ValueEventListener;
 
 import java.io.IOException;
 
-public class RecommendationActivity extends AppCompatActivity {
+public class RecommendationActivity extends ComponentActivity {
 
-    private TextView recommendationTitle, bulletPoint1, bulletPoint2, bulletPoint3, bulletPoint4;
-    private Button homeButton; // Declare the "Go to Home" button
+    private TextView bulletPoint1, bulletPoint2, bulletPoint3, bulletPoint4;
+    private Button homeButton;
+
+    private static final String[][] RECOMMENDATIONS = {
+            {"4 sets of 10-15 reps for each exercise.", "High protein, low carb diet.", "Dumbbells, Barbell, Bench.", "4 sets of 10-15 reps."},
+            {"3 sets of 12-15 reps for each exercise.", "Balanced diet with moderate carbs.", "Kettlebells, Resistance Bands.", "3 sets of 12-15 reps."},
+            {"5 sets of 8-10 reps for each exercise.", "Low-fat, high-fiber diet.", "Pull-up Bar, Yoga Mat.", "5 sets of 8-10 reps."},
+            {"2 sets of 15-20 reps for each exercise.", "Protein shakes and clean eating.", "Treadmill, Elliptical.", "2 sets of 15-20 reps."},
+            {"3 sets of 10-12 reps for each exercise.", "Mediterranean-style diet.", "Dumbbells, Medicine Ball.", "3 sets of 10-12 reps."}
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_recommendation);
 
-        // Bind UI elements
-        recommendationTitle = findViewById(R.id.recommendationTitle);
         bulletPoint1 = findViewById(R.id.bulletPoint1);
         bulletPoint2 = findViewById(R.id.bulletPoint2);
         bulletPoint3 = findViewById(R.id.bulletPoint3);
         bulletPoint4 = findViewById(R.id.bulletPoint4);
-        homeButton = findViewById(R.id.homeButton); // Bind the "Go to Home" button
+        homeButton = findViewById(R.id.homeButton);
 
-        // Set up click listener for the "Go to Home" button
         homeButton.setOnClickListener(v -> {
-            // Navigate to the HomeActivity
             Intent intent = new Intent(RecommendationActivity.this, HomeActivity.class);
             startActivity(intent);
+            finish();
         });
 
-        // Get the USER_ID passed from the previous activity
-        String userId = getIntent().getStringExtra("USER_ID");
-
-        if (userId == null || userId.isEmpty()) {
-            Toast.makeText(this, "User ID not found!", Toast.LENGTH_SHORT).show();
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser == null) {
+            Toast.makeText(this, "User not authenticated!", Toast.LENGTH_SHORT).show();
+            finish();
             return;
         }
 
-        // Reference Firebase Realtime Database
-        DatabaseReference userRef = FirebaseDatabase.getInstance().getReference("Users").child(userId);
+        String uid = currentUser.getUid();
+        DatabaseReference userRef = FirebaseDatabase.getInstance().getReference("Users").child(uid);
 
-        // Fetch data for the specific user
         userRef.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot snapshot) {
-                if (snapshot.exists()) {
-                    // Retrieve user data from Firebase
-                    String heightStr = snapshot.child("height").getValue(String.class);
-                    String weightStr = snapshot.child("weight").getValue(String.class);
-                    String ageStr = snapshot.child("age").getValue(String.class);
-                    String diseases = snapshot.child("diseases").getValue(String.class);
-                    String gender = snapshot.child("gender").getValue(String.class);
-                    String goal = snapshot.child("goal").getValue(String.class);
-
-                    if (heightStr != null && weightStr != null && ageStr != null && gender != null && goal != null) {
-                        // Parse numerical values
-                        float height = Float.parseFloat(heightStr);
-                        float weight = Float.parseFloat(weightStr);
-                        float age = Float.parseFloat(ageStr);
-
-                        // Calculate BMI
-                        float bmi = weight / ((height / 100) * (height / 100));
-
-                        // Make predictions using the TensorFlow Lite model
-                        makePrediction(height, weight, age, bmi, diseases, gender, goal);
-                    } else {
-                        Toast.makeText(RecommendationActivity.this, "Incomplete user data!", Toast.LENGTH_SHORT).show();
-                    }
-                } else {
+                if (!snapshot.exists()) {
                     Toast.makeText(RecommendationActivity.this, "No data found for this user!", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                String heightStr = snapshot.child("height").getValue(String.class);
+                String weightStr = snapshot.child("weight").getValue(String.class);
+                String ageStr = snapshot.child("age").getValue(String.class);
+                String gender = snapshot.child("gender").getValue(String.class);
+                String goal = snapshot.child("goal").getValue(String.class);
+
+                if (heightStr == null || weightStr == null || ageStr == null || gender == null || goal == null) {
+                    Toast.makeText(RecommendationActivity.this, "Incomplete user data!", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                try {
+                    float height = Float.parseFloat(heightStr);
+                    float weight = Float.parseFloat(weightStr);
+                    float age = Float.parseFloat(ageStr);
+                    float bmi = weight / ((height / 100f) * (height / 100f));
+                    makePrediction(height, weight, age, bmi, gender, goal);
+                } catch (NumberFormatException e) {
+                    Toast.makeText(RecommendationActivity.this, "Invalid numeric data!", Toast.LENGTH_SHORT).show();
                 }
             }
 
@@ -91,117 +95,51 @@ public class RecommendationActivity extends AppCompatActivity {
         });
     }
 
-    // Function to make predictions using the TensorFlow Lite model
-    private void makePrediction(float height, float weight, float age, float bmi, String diseases, String gender, String goal) {
-        try {
-            // Load the TensorFlow Lite model
-            RecommendationModelHandler modelHandler = new RecommendationModelHandler(this, "workout_recommendation_model.tflite");
+    private void makePrediction(float height, float weight, float age, float bmi, String gender, String goal) {
+        float genderEncoded = encodeGender(gender);
+        float goalEncoded = encodeGoal(goal);
 
-            // Prepare input data (ensure alignment with training input features)
-            float genderEncoded = encodeGender(gender); // Encode gender as numerical input
-            float goalEncoded = encodeGoal(goal); // Encode goal as numerical input
+        if (genderEncoded < 0 || goalEncoded < 0) {
+            Toast.makeText(this, "Unsupported gender or goal.", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
-            float[] inputData = {height, weight, age, bmi, genderEncoded, goalEncoded};
+        float[] inputData = {height, weight, age, bmi, genderEncoded, goalEncoded};
 
-            // Run model inference
+        try (RecommendationModelHandler modelHandler = new RecommendationModelHandler(this, "recommendation_model.tflite")) {
             float[] output = modelHandler.predict(inputData);
 
-            // Process model output (find the class with the highest probability)
-            int recommendedClassIndex = 0;
-            float maxProbability = output[0];
+            int bestIndex = 0;
             for (int i = 1; i < output.length; i++) {
-                if (output[i] > maxProbability) {
-                    maxProbability = output[i];
-                    recommendedClassIndex = i;
-                }
+                if (output[i] > output[bestIndex]) bestIndex = i;
             }
 
-            // Get recommendation details
-            String exerciseRecommendation = getExerciseRecommendation(recommendedClassIndex);
-            String dietPlan = getDietPlan(recommendedClassIndex);
-            String equipment = getEquipment(recommendedClassIndex);
-            String exerciseSets = getExerciseSets(recommendedClassIndex);
-
-            // Populate TextViews with recommendations
-            bulletPoint1.setText("Exercise Recommendation: " + exerciseRecommendation);
-            bulletPoint2.setText("Diet Plan: " + dietPlan);
-            bulletPoint3.setText("Equipment Needed: " + equipment);
-            bulletPoint4.setText("Custom Exercise Sets: " + exerciseSets);
-
-            // Close the model handler
-            modelHandler.close();
+            if (bestIndex < RECOMMENDATIONS.length) {
+                bulletPoint1.setText("Exercise Recommendation: " + RECOMMENDATIONS[bestIndex][0]);
+                bulletPoint2.setText("Diet Plan: " + RECOMMENDATIONS[bestIndex][1]);
+                bulletPoint3.setText("Equipment Needed: " + RECOMMENDATIONS[bestIndex][2]);
+                bulletPoint4.setText("Custom Exercise Sets: " + RECOMMENDATIONS[bestIndex][3]);
+            } else {
+                Toast.makeText(this, "Model output error!", Toast.LENGTH_SHORT).show();
+            }
 
         } catch (IOException e) {
-            e.printStackTrace();
-            Toast.makeText(this, "Failed to load model", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Failed to load model!", Toast.LENGTH_SHORT).show();
         }
     }
 
-    // Helper function to encode gender into numerical values
     private float encodeGender(String gender) {
-        if (gender.equalsIgnoreCase("male")) {
-            return 0.0f; // Male = 0
-        } else if (gender.equalsIgnoreCase("female")) {
-            return 1.0f; // Female = 1
-        }
-        return -1.0f; // Unknown/Default
+        if (gender.equalsIgnoreCase("male")) return 0.0f;
+        if (gender.equalsIgnoreCase("female")) return 1.0f;
+        return -1.0f;
     }
 
-    // Helper function to encode goal into numerical values
     private float encodeGoal(String goal) {
         switch (goal.toLowerCase()) {
             case "weight loss": return 0.0f;
             case "muscle gain": return 1.0f;
             case "general fitness": return 2.0f;
-            default: return -1.0f; // Unknown/Default
-        }
-    }
-
-    // Function to map class index to exercise recommendations
-    private String getExerciseRecommendation(int classIndex) {
-        switch (classIndex) {
-            case 0: return "4 sets of 10-15 reps for each exercise.";
-            case 1: return "3 sets of 12-15 reps for each exercise.";
-            case 2: return "5 sets of 8-10 reps for each exercise.";
-            case 3: return "2 sets of 15-20 reps for each exercise.";
-            case 4: return "3 sets of 10-12 reps for each exercise.";
-            default: return "No recommendation available.";
-        }
-    }
-
-    // Function to map class index to diet plans
-    private String getDietPlan(int classIndex) {
-        switch (classIndex) {
-            case 0: return "High protein, low carb diet.";
-            case 1: return "Balanced diet with moderate carbs.";
-            case 2: return "Low-fat, high-fiber diet.";
-            case 3: return "Protein shakes and clean eating.";
-            case 4: return "Mediterranean-style diet.";
-            default: return "No diet plan available.";
-        }
-    }
-
-    // Function to map class index to equipment
-    private String getEquipment(int classIndex) {
-        switch (classIndex) {
-            case 0: return "Dumbbells, Barbell, Bench.";
-            case 1: return "Kettlebells, Resistance Bands.";
-            case 2: return "Pull-up Bar, Yoga Mat.";
-            case 3: return "Treadmill, Elliptical.";
-            case 4: return "Dumbbells, Medicine Ball.";
-            default: return "No equipment needed.";
-        }
-    }
-
-    // Function to map class index to custom exercise sets
-    private String getExerciseSets(int classIndex) {
-        switch (classIndex) {
-            case 0: return "4 sets of 10-15 reps.";
-            case 1: return "3 sets of 12-15 reps.";
-            case 2: return "5 sets of 8-10 reps.";
-            case 3: return "2 sets of 15-20 reps.";
-            case 4: return "3 sets of 10-12 reps.";
-            default: return "No custom sets available.";
+            default: return -1.0f;
         }
     }
 }
