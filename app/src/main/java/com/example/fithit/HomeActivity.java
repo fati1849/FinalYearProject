@@ -1,16 +1,29 @@
 package com.example.fithit;
 
+import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import android.util.Log;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ServerValue;
+
+
 
 public class HomeActivity extends AppCompatActivity {
 
@@ -18,6 +31,21 @@ public class HomeActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user != null) {
+            Log.d("USER_UID", "UID is: " + user.getUid());
+        } else {
+            Log.d("USER_UID", "User not logged in");
+        }
+
+        Button btnGamification = findViewById(R.id.btnGamification);
+        btnGamification.setOnClickListener(v -> {
+            Intent intent = new Intent(HomeActivity.this, BadgesActivity.class);
+            startActivity(intent);
+        });
+
+
+
 
         // Update dynamic views
         TextView greeting = findViewById(R.id.greeting1);
@@ -43,9 +71,10 @@ public class HomeActivity extends AppCompatActivity {
         workoutImage.setImageResource(R.drawable.sample_image);
 
         // Add button click handlers
-        btnBeginner.setOnClickListener(v ->
-                Toast.makeText(HomeActivity.this, "Beginner level selected!", Toast.LENGTH_SHORT).show()
-        );
+        btnBeginner.setOnClickListener(v -> {
+            Toast.makeText(HomeActivity.this, "Beginner level selected!", Toast.LENGTH_SHORT).show();
+            updateExerciseCount(); // <-- this is new
+        });
 
         btnIntermediate.setOnClickListener(v ->
                 Toast.makeText(HomeActivity.this, "Intermediate level selected!", Toast.LENGTH_SHORT).show()
@@ -74,10 +103,12 @@ public class HomeActivity extends AppCompatActivity {
                 Toast.makeText(HomeActivity.this, "Settings selected", Toast.LENGTH_SHORT).show();
                 return true;
             }
-            else if (itemId == R.id.navigation_gamification) {
-                Toast.makeText(HomeActivity.this, "Gamification selected", Toast.LENGTH_SHORT).show();
+            else if(itemId == R.id.navigation_gamification) {
+                Intent intent = new Intent(HomeActivity.this, BadgesActivity.class);
+                startActivity(intent);
                 return true;
-            }
+
+        }
             else if (itemId == R.id.navigation_person) {
                 Toast.makeText(HomeActivity.this, "Profile selected", Toast.LENGTH_SHORT).show();
                 return true;
@@ -85,4 +116,14 @@ public class HomeActivity extends AppCompatActivity {
             return false;
         });
     }
+    private void updateExerciseCount() {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user != null) {
+            String uid = user.getUid();
+            DatabaseReference userRef = FirebaseDatabase.getInstance().getReference("Users").child(uid);
+            userRef.child("exercisesCompleted").setValue(ServerValue.increment(1));
+        }
+    }
+
 }
+

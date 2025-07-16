@@ -12,6 +12,8 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme.NoActionBar"
         tools:targetApi="31">
+        <activity android:name=".BadgesActivity"></activity>
+
         <activity
             android:name=".RecommendationActivity"
             android:exported="false" />
