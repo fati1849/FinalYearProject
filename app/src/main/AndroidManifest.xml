@@ -31,9 +31,6 @@
             android:name=".ScreenOneFragment"
             android:exported="false" />
         <activity
-            android:name=".ActivityStatusActivity"
-            android:exported="false" />
-        <activity
             android:name=".goalInfoActivity"
             android:exported="false" />
         <activity
