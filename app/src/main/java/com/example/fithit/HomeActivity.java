@@ -100,17 +100,20 @@ public class HomeActivity extends AppCompatActivity {
                 Toast.makeText(HomeActivity.this, "Workouts selected", Toast.LENGTH_SHORT).show();
                 return true;
             } else if (itemId == R.id.navigation_settings) {
-                Toast.makeText(HomeActivity.this, "Settings selected", Toast.LENGTH_SHORT).show();
+                Intent intent = new Intent(HomeActivity.this, SettingsActivity.class);
+                startActivity(intent);
                 return true;
             }
+
             else if(itemId == R.id.navigation_gamification) {
                 Intent intent = new Intent(HomeActivity.this, BadgesActivity.class);
                 startActivity(intent);
                 return true;
 
         }
-            else if (itemId == R.id.navigation_person) {
-                Toast.makeText(HomeActivity.this, "Profile selected", Toast.LENGTH_SHORT).show();
+            else if (itemId == R.id.navigation_person) {  // ✅ your Community option
+                Intent intent = new Intent(HomeActivity.this, CommunityActivity.class);
+                startActivity(intent);
                 return true;
             }
             return false;
