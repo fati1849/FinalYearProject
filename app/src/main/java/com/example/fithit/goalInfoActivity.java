@@ -6,8 +6,11 @@ import android.widget.Button;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.Toast;
+
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
@@ -16,30 +19,26 @@ public class goalInfoActivity extends AppCompatActivity {
     private RadioGroup goalGroup;
     private Button getStartedButton;
     private DatabaseReference databaseReference;
-    private String userId; // Store the user's unique ID
+    private FirebaseUser currentUser;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_goalinfo);
 
-        // Initialize Firebase Realtime Database
-        databaseReference = FirebaseDatabase.getInstance().getReference();
+        // Initialize Firebase references
+        currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser == null) {
+            Toast.makeText(this, "User not authenticated", Toast.LENGTH_LONG).show();
+            finish();
+            return;
+        }
+
+        String uid = currentUser.getUid();
+        databaseReference = FirebaseDatabase.getInstance().getReference("Users").child(uid);
 
         goalGroup = findViewById(R.id.goalGroup);
         getStartedButton = findViewById(R.id.getStartedButton);
-
-        // Retrieve the user ID passed from the previous activity
-        Intent intent = getIntent();
-        if (intent != null) {
-            userId = intent.getStringExtra("USER_ID");
-        }
-
-        // Check if the userId is null
-        if (userId == null || userId.isEmpty()) {
-            Toast.makeText(this, "User ID is null or missing. Cannot save data!", Toast.LENGTH_LONG).show();
-            return; // Prevent further actions if userId is null
-        }
 
         getStartedButton.setOnClickListener(v -> {
             int selectedId = goalGroup.getCheckedRadioButtonId();
@@ -49,19 +48,20 @@ public class goalInfoActivity extends AppCompatActivity {
                 RadioButton selectedRadioButton = findViewById(selectedId);
                 String selectedGoal = selectedRadioButton.getText().toString();
 
-                // Save the selected goal to Firebase under the existing user ID
-                databaseReference.child("Users").child(userId).child("goal").setValue(selectedGoal)
+                // Save selected goal
+                databaseReference.child("goal").setValue(selectedGoal)
                         .addOnCompleteListener(task -> {
                             if (task.isSuccessful()) {
                                 Toast.makeText(goalInfoActivity.this, "Goal saved successfully", Toast.LENGTH_SHORT).show();
+
+                                // Move to RecommendationActivity
+                                Intent intent = new Intent(goalInfoActivity.this, RecommendationActivity.class);
+                                startActivity(intent);
+                                finish(); // Optional: prevent back navigation
                             } else {
                                 Toast.makeText(goalInfoActivity.this, "Failed to save goal", Toast.LENGTH_SHORT).show();
                             }
                         });
-
-                // Proceed to the next activity (e.g., DashboardActivity)
-                Intent homeIntent = new Intent(goalInfoActivity.this, RecommendationActivity.class);
-                startActivity(homeIntent);
             }
         });
     }

@@ -1,207 +1,223 @@
 package com.example.fithit;
 
-import android.content.Intent;
+import android.content.Context;
 import android.os.Bundle;
-import android.widget.Button;
+import android.util.Log;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import androidx.appcompat.app.AppCompatActivity;
-
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.ValueEventListener;
-
-import java.io.IOException;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.database.*;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.HashMap;
+import java.util.Map;
 
 public class RecommendationActivity extends AppCompatActivity {
 
-    private TextView recommendationTitle, bulletPoint1, bulletPoint2, bulletPoint3, bulletPoint4;
-    private Button homeButton; // Declare the "Go to Home" button
+    private TextView tvExercise, tvDiet, tvEquipment, tvSets;
+    private Map<Integer, String[]> allRecommendations = new HashMap<>();
+    private float[] numMeans = new float[4];  // For height, weight, age, BMI
+    private float[] numScales = new float[4];
+    private static final int MODEL_OUTPUT_CLASSES = 5;  // Your model outputs 5 classes
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_recommendation);
 
-        // Bind UI elements
-        recommendationTitle = findViewById(R.id.recommendationTitle);
-        bulletPoint1 = findViewById(R.id.bulletPoint1);
-        bulletPoint2 = findViewById(R.id.bulletPoint2);
-        bulletPoint3 = findViewById(R.id.bulletPoint3);
-        bulletPoint4 = findViewById(R.id.bulletPoint4);
-        homeButton = findViewById(R.id.homeButton); // Bind the "Go to Home" button
+        // Initialize UI components
+        tvExercise = findViewById(R.id.bulletPoint1);
+        tvDiet = findViewById(R.id.bulletPoint2);
+        tvEquipment = findViewById(R.id.bulletPoint3);
+        tvSets = findViewById(R.id.bulletPoint4);
 
-        // Set up click listener for the "Go to Home" button
-        homeButton.setOnClickListener(v -> {
-            // Navigate to the HomeActivity
-            Intent intent = new Intent(RecommendationActivity.this, HomeActivity.class);
-            startActivity(intent);
-        });
+        try {
+            // 1. Load configuration data (can load more than MODEL_OUTPUT_CLASSES entries)
+            loadConfiguration();
 
-        // Get the USER_ID passed from the previous activity
-        String userId = getIntent().getStringExtra("USER_ID");
+            // 2. Get user data from Firebase
+            fetchUserDataAndPredict();
 
-        if (userId == null || userId.isEmpty()) {
-            Toast.makeText(this, "User ID not found!", Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {
+            showError("Initialization failed: " + e.getMessage());
+            Log.e("RecommendationActivity", "Error: ", e);
+        }
+    }
+
+    private void loadConfiguration() throws Exception {
+        // Load model_info.json from assets
+        InputStream is = getAssets().open("model_info.json");
+        BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+        StringBuilder sb = new StringBuilder();
+        String line;
+
+        while ((line = reader.readLine()) != null) {
+            sb.append(line);
+        }
+
+        JSONObject config = new JSONObject(sb.toString());
+        JSONObject preprocessor = config.getJSONObject("preprocessor");
+
+        // Load normalization parameters
+        JSONArray meansArray = preprocessor.getJSONArray("means");
+        JSONArray scalesArray = preprocessor.getJSONArray("scales");
+        for (int i = 0; i < meansArray.length(); i++) {
+            numMeans[i] = (float) meansArray.getDouble(i);
+            numScales[i] = (float) scalesArray.getDouble(i);
+        }
+
+        // Load ALL recommendations from JSON (can be more than MODEL_OUTPUT_CLASSES)
+        JSONArray exerciseData = config.getJSONArray("exercise_data");
+        Log.d("ConfigLoad", "Found " + exerciseData.length() + " exercise entries in config");
+
+        // We need at least as many recommendations as the model outputs
+        if (exerciseData.length() < MODEL_OUTPUT_CLASSES) {
+            throw new IllegalStateException("Config must contain at least " + MODEL_OUTPUT_CLASSES + " exercise entries");
+        }
+
+        for (int i = 0; i < exerciseData.length(); i++) {
+            JSONObject item = exerciseData.getJSONObject(i);
+            allRecommendations.put(i, new String[]{
+                    item.getString("Exercises"),
+                    item.getString("Diet"),
+                    item.getString("Equipment"),
+                    generateSetsDescription(i)
+            });
+        }
+    }
+
+    private void fetchUserDataAndPredict() {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            showError("User not authenticated");
             return;
         }
 
-        // Reference Firebase Realtime Database
-        DatabaseReference userRef = FirebaseDatabase.getInstance().getReference("Users").child(userId);
+        DatabaseReference userRef = FirebaseDatabase.getInstance()
+                .getReference("Users").child(user.getUid());
 
-        // Fetch data for the specific user
         userRef.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot snapshot) {
-                if (snapshot.exists()) {
-                    // Retrieve user data from Firebase
-                    String heightStr = snapshot.child("height").getValue(String.class);
-                    String weightStr = snapshot.child("weight").getValue(String.class);
-                    String ageStr = snapshot.child("age").getValue(String.class);
-                    String diseases = snapshot.child("diseases").getValue(String.class);
+                try (RecommendationModelHandler model = new RecommendationModelHandler(RecommendationActivity.this)) {
+                    // Parse user data
+                    float height = Float.parseFloat(snapshot.child("height").getValue(String.class));
+                    float weight = Float.parseFloat(snapshot.child("weight").getValue(String.class));
+                    float age = Float.parseFloat(snapshot.child("age").getValue(String.class));
                     String gender = snapshot.child("gender").getValue(String.class);
                     String goal = snapshot.child("goal").getValue(String.class);
 
-                    if (heightStr != null && weightStr != null && ageStr != null && gender != null && goal != null) {
-                        // Parse numerical values
-                        float height = Float.parseFloat(heightStr);
-                        float weight = Float.parseFloat(weightStr);
-                        float age = Float.parseFloat(ageStr);
+                    // Normalize inputs
+                    float[] normalizedInput = normalizeInputs(height, weight, age, gender, goal);
 
-                        // Calculate BMI
-                        float bmi = weight / ((height / 100) * (height / 100));
+                    // Get prediction (will return array of size MODEL_OUTPUT_CLASSES)
+                    float[] predictions = model.predict(normalizedInput);
+                    Log.d("Prediction", "Raw predictions: " + java.util.Arrays.toString(predictions));
 
-                        // Make predictions using the TensorFlow Lite model
-                        makePrediction(height, weight, age, bmi, diseases, gender, goal);
-                    } else {
-                        Toast.makeText(RecommendationActivity.this, "Incomplete user data!", Toast.LENGTH_SHORT).show();
-                    }
-                } else {
-                    Toast.makeText(RecommendationActivity.this, "No data found for this user!", Toast.LENGTH_SHORT).show();
+                    // Process and display results
+                    displayRecommendation(predictions);
+
+                } catch (Exception e) {
+                    showError("Prediction failed: " + e.getMessage());
+                    Log.e("RecommendationActivity", "Prediction error: ", e);
                 }
             }
 
             @Override
             public void onCancelled(DatabaseError error) {
-                Toast.makeText(RecommendationActivity.this, "Failed to fetch data!", Toast.LENGTH_SHORT).show();
+                showError("Database error: " + error.getMessage());
             }
         });
     }
 
-    // Function to make predictions using the TensorFlow Lite model
-    private void makePrediction(float height, float weight, float age, float bmi, String diseases, String gender, String goal) {
-        try {
-            // Load the TensorFlow Lite model
-            RecommendationModelHandler modelHandler = new RecommendationModelHandler(this, "workout_recommendation_model.tflite");
+    private float[] normalizeInputs(float height, float weight, float age,
+                                    String gender, String goal) {
+        // Calculate BMI
+        float bmi = weight / ((height / 100f) * (height / 100f));
 
-            // Prepare input data (ensure alignment with training input features)
-            float genderEncoded = encodeGender(gender); // Encode gender as numerical input
-            float goalEncoded = encodeGoal(goal); // Encode goal as numerical input
+        // Create input array
+        float[] input = new float[9]; // 4 numeric + 2 gender + 3 goal
 
-            float[] inputData = {height, weight, age, bmi, genderEncoded, goalEncoded};
+        // Normalize numerical features
+        input[0] = (height - numMeans[0]) / numScales[0]; // height
+        input[1] = (weight - numMeans[1]) / numScales[1]; // weight
+        input[2] = (age - numMeans[2]) / numScales[2];    // age
+        input[3] = (bmi - numMeans[3]) / numScales[3];    // bmi
 
-            // Run model inference
-            float[] output = modelHandler.predict(inputData);
-
-            // Process model output (find the class with the highest probability)
-            int recommendedClassIndex = 0;
-            float maxProbability = output[0];
-            for (int i = 1; i < output.length; i++) {
-                if (output[i] > maxProbability) {
-                    maxProbability = output[i];
-                    recommendedClassIndex = i;
-                }
-            }
-
-            // Get recommendation details
-            String exerciseRecommendation = getExerciseRecommendation(recommendedClassIndex);
-            String dietPlan = getDietPlan(recommendedClassIndex);
-            String equipment = getEquipment(recommendedClassIndex);
-            String exerciseSets = getExerciseSets(recommendedClassIndex);
-
-            // Populate TextViews with recommendations
-            bulletPoint1.setText("Exercise Recommendation: " + exerciseRecommendation);
-            bulletPoint2.setText("Diet Plan: " + dietPlan);
-            bulletPoint3.setText("Equipment Needed: " + equipment);
-            bulletPoint4.setText("Custom Exercise Sets: " + exerciseSets);
-
-            // Close the model handler
-            modelHandler.close();
-
-        } catch (IOException e) {
-            e.printStackTrace();
-            Toast.makeText(this, "Failed to load model", Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    // Helper function to encode gender into numerical values
-    private float encodeGender(String gender) {
+        // One-hot encode gender (male=1,0; female=0,1)
         if (gender.equalsIgnoreCase("male")) {
-            return 0.0f; // Male = 0
-        } else if (gender.equalsIgnoreCase("female")) {
-            return 1.0f; // Female = 1
+            input[4] = 1f;
+            input[5] = 0f;
+        } else {
+            input[4] = 0f;
+            input[5] = 1f;
         }
-        return -1.0f; // Unknown/Default
-    }
 
-    // Helper function to encode goal into numerical values
-    private float encodeGoal(String goal) {
+        // One-hot encode goal
         switch (goal.toLowerCase()) {
-            case "weight loss": return 0.0f;
-            case "muscle gain": return 1.0f;
-            case "general fitness": return 2.0f;
-            default: return -1.0f; // Unknown/Default
+            case "weight loss":
+                input[6] = 1f; input[7] = 0f; input[8] = 0f;
+                break;
+            case "muscle gain":
+                input[6] = 0f; input[7] = 1f; input[8] = 0f;
+                break;
+            default: // general fitness
+                input[6] = 0f; input[7] = 0f; input[8] = 1f;
+        }
+
+        return input;
+    }
+
+    private void displayRecommendation(float[] predictions) {
+        // 1. Validate predictions
+        if (predictions == null || predictions.length != MODEL_OUTPUT_CLASSES) {
+            showError("Invalid model output");
+            return;
+        }
+
+        // 2. Find the class with highest probability (0 to MODEL_OUTPUT_CLASSES-1)
+        int bestClass = 0;
+        for (int i = 1; i < predictions.length; i++) {
+            if (predictions[i] > predictions[bestClass]) {
+                bestClass = i;
+            }
+        }
+        Log.d("Prediction", "Selected class: " + bestClass);
+
+        // 3. Get recommendation - must exist since we validated during load
+        String[] recommendation = allRecommendations.get(bestClass);
+        if (recommendation == null) {
+            showError("Recommendation not found for class " + bestClass);
+            return;
+        }
+
+        // 4. Update UI
+        tvExercise.setText("Exercise: " + recommendation[0]);
+        tvDiet.setText("Diet: " + recommendation[1]);
+        tvEquipment.setText("Equipment: " + recommendation[2]);
+        tvSets.setText("Sets: " + recommendation[3]);
+    }
+
+    private String generateSetsDescription(int classIndex) {
+        // Customize based on your training data
+        switch (classIndex % 5) {  // Ensure we stay within 0-4 range
+            case 0: return "3 sets of 12 reps";
+            case 1: return "4 sets of 10 reps";
+            case 2: return "5 sets of 8 reps";
+            case 3: return "3 sets of 15 reps";
+            case 4: return "4 sets of 12 reps";
+            default: return "3 sets of 10 reps";
         }
     }
 
-    // Function to map class index to exercise recommendations
-    private String getExerciseRecommendation(int classIndex) {
-        switch (classIndex) {
-            case 0: return "4 sets of 10-15 reps for each exercise.";
-            case 1: return "3 sets of 12-15 reps for each exercise.";
-            case 2: return "5 sets of 8-10 reps for each exercise.";
-            case 3: return "2 sets of 15-20 reps for each exercise.";
-            case 4: return "3 sets of 10-12 reps for each exercise.";
-            default: return "No recommendation available.";
-        }
-    }
-
-    // Function to map class index to diet plans
-    private String getDietPlan(int classIndex) {
-        switch (classIndex) {
-            case 0: return "High protein, low carb diet.";
-            case 1: return "Balanced diet with moderate carbs.";
-            case 2: return "Low-fat, high-fiber diet.";
-            case 3: return "Protein shakes and clean eating.";
-            case 4: return "Mediterranean-style diet.";
-            default: return "No diet plan available.";
-        }
-    }
-
-    // Function to map class index to equipment
-    private String getEquipment(int classIndex) {
-        switch (classIndex) {
-            case 0: return "Dumbbells, Barbell, Bench.";
-            case 1: return "Kettlebells, Resistance Bands.";
-            case 2: return "Pull-up Bar, Yoga Mat.";
-            case 3: return "Treadmill, Elliptical.";
-            case 4: return "Dumbbells, Medicine Ball.";
-            default: return "No equipment needed.";
-        }
-    }
-
-    // Function to map class index to custom exercise sets
-    private String getExerciseSets(int classIndex) {
-        switch (classIndex) {
-            case 0: return "4 sets of 10-15 reps.";
-            case 1: return "3 sets of 12-15 reps.";
-            case 2: return "5 sets of 8-10 reps.";
-            case 3: return "2 sets of 15-20 reps.";
-            case 4: return "3 sets of 10-12 reps.";
-            default: return "No custom sets available.";
-        }
+    private void showError(String message) {
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+        tvExercise.setText("Error: " + message);
+        Log.e("RecommendationError", message);
     }
 }

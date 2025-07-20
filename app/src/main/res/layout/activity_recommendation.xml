@@ -1,83 +1,104 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/recommendationScroll"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="16dp"
-    android:background="#FFFFFF">
+    android:background="#FFFFFF"
+    android:padding="16dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:gravity="center_horizontal">
 
-        <!-- Title of the Recommendation Page -->
+        <!-- Dynamic Greeting -->
+        <TextView
+            android:id="@+id/recommendationGreeting"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Welcome!"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="#3F51B5"
+            android:layout_marginBottom="8dp"
+            android:textAlignment="center" />
+
+        <!-- Title -->
         <TextView
             android:id="@+id/recommendationTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Your Recommendations"
-            android:textSize="24sp"
-            android:textColor="#FFA500"
+            android:text="🎯 Your Personalized Fitness Plan"
+            android:textSize="22sp"
             android:textStyle="bold"
-            android:layout_gravity="center_horizontal"
-            android:paddingBottom="16dp" />
+            android:textColor="#FF5722"
+            android:paddingBottom="20dp"
+            android:textAlignment="center" />
 
-        <!-- Bullet Points Section -->
+        <!-- Recommendation Items -->
         <TextView
             android:id="@+id/bulletPoint1"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-
-            android:drawablePadding="8dp"
-            android:text=" Cardio , Squats, yoga, deadlifts, bench presses, and overhead presses"
-            android:textColor="#000000"
-            android:textSize="15sp"
-            android:layout_marginBottom="8dp" />
+            android:text="Exercise Recommendation:"
+            android:textColor="#212121"
+            android:textSize="17sp"
+            android:layout_marginBottom="10dp"
+            android:textStyle="bold"
+            android:textIsSelectable="true" />
 
         <TextView
             android:id="@+id/bulletPoint2"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-
-            android:drawablePadding="8dp"
-            android:text="Vegetables: (Garlic, Roma Tomatoes, Capers and Iceberg Lettuce); Protein Intake: (Cheese Standwish, Baru Nuts, Beech Nuts, Squash Seeds, and Mixed Teff); Juice: (Apple juice, beetroot juice and mango juice)"
-            android:textColor="#000000"
-            android:textSize="18sp"
-            android:layout_marginBottom="8dp" />
+            android:text="Diet Plan:"
+            android:textColor="#212121"
+            android:textSize="17sp"
+            android:layout_marginBottom="10dp"
+            android:textStyle="bold"
+            android:textIsSelectable="true" />
 
         <TextView
             android:id="@+id/bulletPoint3"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-
-            android:drawablePadding="8dp"
-            android:text="Dumbbells, barbells and Blood glucose monitor"
-            android:textColor="#000000"
-            android:textSize="18sp"
-            android:layout_marginBottom="8dp" />
+            android:text="Equipment Needed:"
+            android:textColor="#212121"
+            android:textSize="17sp"
+            android:layout_marginBottom="10dp"
+            android:textStyle="bold"
+            android:textIsSelectable="true" />
 
         <TextView
             android:id="@+id/bulletPoint4"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Custom Exercise Sets:"
+            android:textColor="#212121"
+            android:textSize="17sp"
+            android:layout_marginBottom="10dp"
+            android:textStyle="bold"
+            android:textIsSelectable="true" />
+
+        <!-- Optional Loading Indicator -->
+        <ProgressBar
+            android:id="@+id/loadingBar"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:visibility="gone" />
 
-            android:drawablePadding="8dp"
-            android:text="3 sets of 12-15 reps for each exercise"
-            android:textColor="#000000"
-            android:textSize="18sp"
-            android:layout_marginBottom="8dp" />
-
-        <!-- Button to Return Home -->
+        <!-- Navigation Button -->
         <Button
             android:id="@+id/homeButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:backgroundTint="#FFA500"
-            android:text="Go  to Home"
-            android:textColor="@color/white"
+            android:text="🏠 Back to Home"
+            android:textColor="#FFFFFF"
             android:textStyle="bold"
+            android:backgroundTint="#FF9800"
+            android:layout_marginTop="24dp"
             android:padding="12dp" />
     </LinearLayout>
 </ScrollView>
